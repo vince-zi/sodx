@@ -1,226 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Volume2, Play, ExternalLink, Film, Zap, CloudLightning, ShieldCheck, Server, AlertCircle, Loader2, Menu, X } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pansou Ultra - 臻彩影视搜索</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #09090b; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .aliyun-glow { background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(9, 9, 11, 0) 100%); border: 1px solid rgba(245, 158, 11, 0.2); }
+        input::placeholder { color: #4b5563; }
+    </style>
+</head>
+<body class="text-slate-300 antialiased">
 
-const App = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // =========================================================================
-  // ★ 核心设置区 ★
-  // 目前默认为 true (演示模式)。等你有了真正的 Pansou 后端，改成 false 即可。
-  // =========================================================================
-  const USE_MOCK_DATA = true; 
-  const API_URL = "https://你的后端地址/search"; // 以后填这里
-
-  // 本地模拟数据库 (包含了你想要展示的资源)
-  const MOCK_DATABASE = [
-    { title: "死侍与金刚狼 4K 臻彩杜比版", source: "阿里云盘", size: "60.5GB", link: "https://www.aliyundrive.com/s/demo1" },
-    { title: "死侍 1-2 合集 1080P", source: "夸克网盘", size: "12.0GB", link: "#" },
-    { title: "黑神话：悟空 实机演示 4K", source: "阿里云盘", size: "22.GB", link: "https://www.aliyundrive.com/s/demo2" },
-    { title: "异形：夺命舰 2160p HDR", source: "阿里云盘", size: "45.2GB", link: "https://www.aliyundrive.com/s/demo3" },
-    { title: "异形全系列 1080p", source: "迅雷云盘", size: "80.0GB", link: "#" },
-    { title: "复仇者联盟4 终局之战 IMAX", source: "阿里云盘", size: "55.1GB", link: "https://www.aliyundrive.com/s/demo4" },
-    { title: "复仇者联盟全集", source: "磁力链接", size: "120GB", link: "#" },
-  ];
-
-  const performSearch = async (e) => {
-    if (e) e.preventDefault();
-    if (!searchTerm.trim()) return;
-
-    setIsSearching(true);
-    setHasSearched(true);
-    setResults([]);
-
-    // 模拟搜索过程
-    setTimeout(async () => {
-      let rawData = [];
-      
-      if (USE_MOCK_DATA) {
-        // 演示模式：在本地数据库搜
-        rawData = MOCK_DATABASE.filter(item => 
-          item.title.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      } else {
-        // 真实模式：尝试请求 API (手机端暂不折腾这个)
-        try {
-          const res = await fetch(`${API_URL}?q=${searchTerm}`);
-          const json = await res.json();
-          rawData = json.list || [];
-        } catch (err) {
-          console.error("API Error");
-        }
-      }
-
-      // ★ 核心逻辑：阿里云盘强制置顶 ★
-      const sorted = rawData.sort((a, b) => {
-        const isAAli = (a.source && a.source.includes('阿里')) || (a.link && a.link.includes('aliyundrive'));
-        const isBAli = (b.source && b.source.includes('阿里')) || (b.link && b.link.includes('aliyundrive'));
-        return isBAli - isAAli;
-      });
-
-      setResults(sorted);
-      setIsSearching(false);
-    }, 600); 
-  };
-
-  // 渲染标签 (臻彩/杜比)
-  const renderBadges = (title) => {
-    const t = (title || '').toLowerCase();
-    const badges = [];
-    if (t.includes('4k') || t.includes('2160p') || t.includes('臻彩')) {
-      badges.push(<span key="4k" className="flex items-center gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold"><Zap size={10} fill="currentColor" /> 臻彩 4K</span>);
-    }
-    if (t.includes('杜比') || t.includes('dolby') || t.includes('atmos')) {
-      badges.push(<span key="db" className="flex items-center gap-1 bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold"><Volume2 size={10} /> 杜比全景声</span>);
-    }
-    return badges;
-  };
-
-  return (
-    <div className="min-h-screen bg-[#09090b] text-slate-300 font-sans flex flex-col overflow-x-hidden selection:bg-amber-500/30">
-      
-      {/* 顶部导航 - 适配手机端 */}
-      <nav className="flex items-center justify-between px-5 py-4 bg-[#09090b]/90 backdrop-blur-md sticky top-0 z-50 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-br from-amber-400 to-orange-600 text-black p-1.5 rounded-lg shadow-lg shadow-orange-500/20">
-            <Film size={18} strokeWidth={3} />
-          </div>
-          <span className="text-lg font-bold text-white tracking-tight">Pansou <span className="text-amber-500">Ultra</span></span>
-        </div>
-        
-        {/* 手机端菜单开关 */}
-        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-slate-400">
-          {isMenuOpen ? <X /> : <Menu />}
-        </button>
-
-        {/* 桌面端菜单 */}
-        <div className="hidden md:flex items-center gap-4 text-xs font-bold text-slate-500">
-          <span className="hover:text-amber-500 cursor-pointer transition-colors">80T 资源库</span>
-          <span className="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/10">
-            <CloudLightning size={12} /> 阿里云盘专享
-          </span>
-        </div>
-      </nav>
-
-      {/* 手机端下拉菜单 */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-[#121214] border-b border-white/10 p-4 space-y-3 animate-in slide-in-from-top-2">
-          <div className="text-sm font-bold text-slate-400">资源库状态: <span className="text-green-500">正常</span></div>
-          <div className="text-sm font-bold text-slate-400">主要来源: <span className="text-amber-500">阿里云盘</span></div>
-        </div>
-      )}
-
-      <main className="flex-1 w-full max-w-3xl mx-auto px-5 py-8 md:py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight leading-tight">
-            搜索 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">臻彩</span> 视界
-          </h1>
-          
-          {/* 搜索框 */}
-          <form onSubmit={performSearch} className="relative group w-full mx-auto">
-             <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/30 to-orange-600/30 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
-            <div className="relative flex items-center bg-[#18181b] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="pl-4 text-slate-500"><Search size={20} /></div>
-              <input 
-                type="text" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="搜：死侍、黑神话、异形..." 
-                className="w-full bg-transparent border-none py-4 px-3 text-base md:text-lg text-white placeholder-slate-600 focus:ring-0 outline-none"
-              />
-              <button 
-                type="submit"
-                disabled={isSearching} 
-                className="mr-2 px-4 md:px-6 py-2 bg-white text-black font-bold rounded-xl hover:bg-amber-400 transition-colors flex items-center gap-2 text-sm md:text-base whitespace-nowrap"
-              >
-                {isSearching ? <Loader2 size={16} className="animate-spin" /> : "搜索"}
-              </button>
+    <!-- 手机端精致导航 -->
+    <nav class="sticky top-0 z-50 glass px-5 py-4 flex items-center justify-between border-b border-white/5">
+        <div class="flex items-center gap-2">
+            <div class="bg-amber-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                <i data-lucide="film" class="text-black w-5 h-5"></i>
             </div>
-          </form>
-
-          {/* 快捷标签 */}
-          {!hasSearched && (
-            <div className="mt-6 flex flex-wrap justify-center gap-2 md:gap-3">
-              {["死侍与金刚狼", "黑神话：悟空", "异形：夺命舰"].map(keyword => (
-                <button 
-                  key={keyword}
-                  onClick={() => { setSearchTerm(keyword); setTimeout(() => performSearch(), 0); }} 
-                  className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-full text-xs text-slate-400 hover:text-white hover:border-amber-500/30 hover:bg-amber-500/5 transition-all"
-                >
-                  {keyword}
-                </button>
-              ))}
-            </div>
-          )}
+            <span class="text-lg font-black text-white italic tracking-tighter">ULTRA PAN</span>
         </div>
-
-        {/* 结果展示 */}
-        <div className="space-y-3 md:space-y-4 pb-20">
-          {results.length > 0 ? (
-            results.map((item, index) => {
-              const isAliyun = (item.source && item.source.includes('阿里')) || (item.link && item.link.includes('aliyundrive'));
-              
-              return (
-                <div key={index} className={`relative flex flex-col p-4 md:p-5 rounded-2xl border transition-all duration-300 ${
-                  isAliyun 
-                  ? "bg-gradient-to-r from-amber-500/[0.08] to-transparent border-amber-500/30 shadow-lg shadow-amber-500/5" 
-                  : "bg-white/[0.02] border-white/5 opacity-70"
-                }`}>
-                  <div className="flex-1 w-full text-left">
-                    <div className="flex items-center gap-2 mb-2">
-                      {isAliyun ? (
-                        <span className="bg-amber-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded">官方推荐</span>
-                      ) : (
-                        <span className="bg-white/10 text-slate-400 text-[10px] font-bold px-1.5 py-0.5 rounded">{item.source || '资源'}</span>
-                      )}
-                      <span className="text-slate-600 text-[10px] font-mono">{item.size || '未知'}</span>
-                    </div>
-                    <h3 className={`text-base font-bold mb-2 ${isAliyun ? "text-white" : "text-slate-300"}`}>{item.title}</h3>
-                    <div className="flex flex-wrap gap-2 mb-4 md:mb-0">{renderBadges(item.title)}</div>
-                  </div>
-
-                  {/* 按钮区域 */}
-                  <div className="mt-3 md:mt-4">
-                     <a href={item.link} target="_blank" className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all w-full ${
-                       isAliyun ? "bg-white text-black hover:bg-amber-400 active:scale-95 shadow-lg shadow-amber-500/20" : "bg-white/5 text-slate-400 hover:bg-white/10"
-                     }`}>
-                       {isAliyun ? <Play size={16} fill="currentColor" /> : <ExternalLink size={16} />}
-                       {isAliyun ? "立即转存" : "查看链接"}
-                     </a>
-                  </div>
-                </div>
-              );
-            })
-          ) : hasSearched && !isSearching ? (
-            <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
-              <p className="text-slate-500 text-sm">暂无演示资源，请搜索 <span className="text-amber-500">"死侍"</span> 试试看</p>
-            </div>
-          ) : null}
+        <div class="bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full border border-amber-500/20 text-[10px] font-bold uppercase tracking-widest">
+            80T Aliyun
         </div>
-      </main>
+    </nav>
 
-      {/* 底部浮窗 - 手机端重点优化 */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-40">
-        <div className="bg-[#18181b]/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <div className="bg-amber-500/10 p-2 rounded-lg text-amber-500">
-                    <ShieldCheck size={20} />
-                </div>
-                <div className="text-left">
-                    <p className="text-xs font-bold text-white">加入内部放映室</p>
-                    <p className="text-[10px] text-slate-400">每日更新 100+ 资源</p>
+    <main class="max-w-xl mx-auto px-5 py-10">
+        <!-- 搜索视觉中心 -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-black text-white mb-6 leading-tight">探索 <span class="text-amber-500">臻彩</span> 视界</h1>
+            <div class="relative group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl blur opacity-20 group-focus-within:opacity-40 transition"></div>
+                <div class="relative flex items-center bg-[#121214] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                    <div class="pl-4 text-slate-500"><i data-lucide="search" class="w-5 h-5"></i></div>
+                    <input type="text" id="searchInput" placeholder="试搜：死侍、黑神话..." 
+                           class="w-full bg-transparent border-none py-4 px-3 text-base text-white outline-none focus:ring-0">
+                    <button onclick="handleSearch()" class="mr-2 bg-white text-black font-bold px-5 py-2 rounded-xl active:scale-95 transition-all">
+                        搜索
+                    </button>
                 </div>
             </div>
-            <button className="bg-white text-black text-xs font-black px-4 py-2 rounded-lg active:scale-95 transition-transform">
-                进群
-            </button>
+            
+            <!-- 手机端快捷入口 -->
+            <div class="mt-5 flex flex-wrap justify-center gap-2">
+                <button onclick="quickSearch('死侍')" class="text-[11px] bg-white/5 border border-white/5 px-3 py-1.5 rounded-full hover:border-amber-500/50 transition-all">死侍与金刚狼</button>
+                <button onclick="quickSearch('黑神话')" class="text-[11px] bg-white/5 border border-white/5 px-3 py-1.5 rounded-full hover:border-amber-500/50 transition-all">黑神话：悟空</button>
+                <button onclick="quickSearch('异形')" class="text-[11px] bg-white/5 border border-white/5 px-3 py-1.5 rounded-full hover:border-amber-500/50 transition-all">异形：夺命舰</button>
+            </div>
         </div>
-      </div>
+
+        <!-- 结果展示区 -->
+        <div id="resultsList" class="space-y-4 pb-32">
+            <!-- 欢迎引导 -->
+            <div class="p-8 text-center border border-dashed border-white/10 rounded-3xl opacity-40">
+                <i data-lucide="clapperboard" class="w-8 h-8 mx-auto mb-3"></i>
+                <p class="text-sm">输入电影名称，阿里云盘资源自动置顶</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部吸底卡片 -->
+    <div class="fixed bottom-6 left-5 right-5 z-50">
+        <div class="glass p-4 rounded-2xl shadow-2xl flex items-center justify-between border-amber-500/20">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-white">进群获取 80T 资源</p>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-tight">每日更新 · 杜比全景声</p>
+                </div>
+            </div>
+            <button class="bg-white text-black text-xs font-black px-4 py-2 rounded-lg active:scale-90 transition-transform">立即加入</button>
+        </div>
     </div>
-  );
-};
 
-export default App;
+    <script>
+        const DATABASE = [
+            { title: "死侍与金刚狼 4K 臻彩杜比版", source: "阿里云盘", size: "60.5GB", link: "#" },
+            { title: "死侍 1-2 合集 1080P", source: "夸克网盘", size: "12.0GB", link: "#" },
+            { title: "黑神话：悟空 全剧情全收集 4K", source: "阿里云盘", size: "28.5GB", link: "#" },
+            { title: "异形：夺命舰 2160p HDR 杜比视界", source: "阿里云盘", size: "45.2GB", link: "#" },
+            { title: "异形全系列 蓝光收藏版", source: "磁力链接", size: "110GB", link: "#" }
+        ];
+
+        function quickSearch(word) {
+            document.getElementById('searchInput').value = word;
+            handleSearch();
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const list = document.getElementById('resultsList');
+            if (!query) return;
+
+            const filtered = DATABASE.filter(item => item.title.toLowerCase().includes(query))
+                .sort((a, b) => (b.source === "阿里云盘") - (a.source === "阿里云盘"));
+
+            list.innerHTML = filtered.length > 0 ? '' : '<div class="py-20 text-center opacity-30 text-sm italic">未搜到相关结果，换个词试试？</div>';
+
+            filtered.forEach(item => {
+                const isAli = item.source === "阿里云盘";
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-2xl transition-all border ${isAli ? 'aliyun-glow shadow-lg' : 'bg-white/5 border-white/5 opacity-70'}`;
+                
+                div.innerHTML = `
+                    <div class="flex flex-col gap-3">
+                        <div class="flex justify-between items-start">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-1.5 py-0.5 rounded-[4px] text-[9px] font-black ${isAli ? 'bg-amber-500 text-black' : 'bg-white/10 text-slate-500'}">${item.source}</span>
+                                    <span class="text-[9px] font-mono text-slate-600">${item.size}</span>
+                                </div>
+                                <h3 class="text-base font-bold leading-tight ${isAli ? 'text-white' : 'text-slate-400'}">${item.title}</h3>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            ${item.title.includes('4K') || item.title.includes('臻彩') ? '<span class="text-[9px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/10">臻彩 4K</span>' : ''}
+                            ${item.title.includes('杜比') ? '<span class="text-[9px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/10">杜比全景声</span>' : ''}
+                        </div>
+                        <a href="${item.link}" class="mt-1 w-full text-center py-2.5 rounded-xl text-xs font-black transition-all ${isAli ? 'bg-white text-black active:scale-95' : 'bg-white/5 text-slate-500'}">
+                            ${isAli ? '存入我的阿里云盘' : '查看链接'}
+                        </a>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        lucide.createIcons();
+        document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSearch(); });
+    </script>
+</body>
+</html>
