@@ -1,141 +1,211 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <title>资源搜索</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-      background: #f6f7f9;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 720px;
-      margin: auto;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .search-box {
-      display: flex;
-      gap: 10px;
-    }
-    input {
-      flex: 1;
-      padding: 12px;
-      font-size: 16px;
-    }
-    button {
-      padding: 12px 18px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .hint {
-      margin: 12px 0;
-      font-size: 14px;
-      color: #666;
-    }
-    .result {
-      background: #fff;
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 8px;
-    }
-    .aliyun {
-      border-left: 4px solid #1677ff;
-    }
-    .source {
-      font-size: 12px;
-      color: #999;
-    }
-    a {
-      color: #1677ff;
-      text-decoration: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>盘搜 - 全网云盘资源导航入口</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --primary: #0066ff; --aliyun: #0052ff; --quark: #121212; }
+        body { background-color: #ffffff; color: #1a1a1a; -webkit-tap-highlight-color: transparent; }
+        .search-box-shadow { shadow-sm; border: 1px solid #e5e7eb; transition: all 0.3s; }
+        .search-box-shadow:focus-within { shadow-lg; border-color: var(--primary); }
+        .platform-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+        .platform-card:active { transform: scale(0.98); }
+        #path-container { display: none; }
+        .gradient-text { background: linear-gradient(90deg, #0066ff, #00c6ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+    </style>
 </head>
+<body class="min-h-screen flex flex-col font-sans">
 
-<body>
-<div class="container">
-  <h1>资源搜索</h1>
+    <!-- 导航栏 -->
+    <nav class="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <i data-lucide="search" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xl tracking-tight">Pan<span class="text-blue-600">Sou</span></span>
+        </div>
+        <div class="hidden md:flex gap-6 text-sm font-medium text-gray-500">
+            <a href="#" class="hover:text-blue-600">使用指南</a>
+            <a href="#" class="hover:text-blue-600">加入交流群</a>
+            <a href="#" class="text-orange-500 font-bold">领取阿里云会员</a>
+        </div>
+    </nav>
 
-  <div class="search-box">
-    <input id="kw" placeholder="输入电影 / 剧名" />
-    <button onclick="search()">搜索</button>
-  </div>
+    <!-- 主搜索区 -->
+    <main class="flex-grow flex flex-col items-center pt-12 md:pt-24 px-4">
+        <div class="w-full max-w-2xl text-center mb-8">
+            <h2 class="text-3xl md:text-5xl font-extrabold mb-4">
+                你想看什么？<span class="gradient-text">即刻出发。</span>
+            </h2>
+            <p class="text-gray-400 text-sm md:text-base">聚合阿里云盘、夸克云盘等官方搜索入口，为您规划最优观看路径</p>
+        </div>
 
-  <div class="hint">
-    📺 电视 / 大文件观看建议使用 <b>阿里云盘</b>
-  </div>
+        <!-- 搜索框 -->
+        <div class="w-full max-w-2xl px-2">
+            <div class="search-box-shadow flex items-center bg-gray-50 rounded-2xl p-2 pl-5 mb-4">
+                <i data-lucide="search" class="text-gray-400 w-6 h-6"></i>
+                <input type="text" id="keyword" 
+                    placeholder="输入电影、电视剧、动漫、软件名称..." 
+                    class="flex-grow bg-transparent border-none outline-none px-4 py-4 text-lg"
+                    onkeyup="if(event.keyCode==13) handleSearch()">
+                <button onclick="handleSearch()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md">
+                    搜索
+                </button>
+            </div>
+            
+            <!-- 热搜/提示标签 -->
+            <div class="flex flex-wrap gap-2 px-2 text-xs text-gray-400" id="tags">
+                <span>大家都在搜：</span>
+                <button onclick="quickSearch('流浪地球2')" class="hover:text-blue-600">流浪地球2</button>
+                <button onclick="quickSearch('三体')" class="hover:text-blue-600">三体</button>
+                <button onclick="quickSearch('黑神话悟空')" class="hover:text-blue-600">黑神话悟空</button>
+            </div>
+        </div>
 
-  <div id="list"></div>
-</div>
+        <!-- 路径选择结果页 (搜索后显示) -->
+        <div id="path-container" class="w-full max-w-2xl mt-12 px-2 pb-20">
+            <div class="flex items-center gap-2 mb-6 text-gray-800">
+                <i data-lucide="map-pin" class="w-5 h-5 text-blue-600"></i>
+                <span class="font-bold text-lg">为您规划的最优路径：</span>
+            </div>
 
-<script>
-  // ⚠️ 改成你自己的 pansou API 地址
-  const API = "https://so42088.zeabur.app/api/search?q=";
+            <div class="grid gap-4">
+                <!-- 路径1：阿里云 (主推) -->
+                <div onclick="go('ali')" class="platform-card animate-slide-up group bg-white border-2 border-blue-600 rounded-2xl p-5 shadow-sm hover:shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                                <i data-lucide="tv"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-xl text-gray-900 flex items-center gap-2">
+                                    阿里云盘路径
+                                    <span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase">最稳</span>
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1">适合大文件、高清 4K 原画，电视端播放首选</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-gray-300 group-hover:text-blue-600 transition-colors"></i>
+                    </div>
+                    <!-- 转化区 -->
+                    <div class="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-blue-600 font-medium">
+                            <i data-lucide="gift" class="w-4 h-4"></i>
+                            <span>领取专享 8 元开通会员福利</span>
+                        </div>
+                        <span class="text-gray-400">官方直达搜索</span>
+                    </div>
+                </div>
 
-  function normalize(item) {
-    return {
-      name: item.title || item.name || item.file_name || "未命名资源",
-      source: item.source || "unknown",
-      link: item.url || item.link
-    };
-  }
+                <!-- 路径2：夸克 -->
+                <div onclick="go('quark')" class="platform-card animate-slide-up bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md" style="animation-delay: 0.1s">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center text-white">
+                                <i data-lucide="smartphone"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-xl text-gray-900">夸克云盘路径</h3>
+                                <p class="text-sm text-gray-500 mt-1">手机端观看体验极佳，自带倍速与解压功能</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-gray-300"></i>
+                    </div>
+                </div>
 
-  async function search() {
-    const kw = document.getElementById("kw").value.trim();
-    if (!kw) return;
+                <!-- 路径3：备用 -->
+                <div onclick="go('backup')" class="platform-card animate-slide-up bg-gray-50 rounded-2xl p-4 text-center border border-dashed border-gray-200" style="animation-delay: 0.2s">
+                    <p class="text-sm text-gray-400">找不到？试试 <span class="text-blue-600 underline font-medium">全网聚合搜索入口</span></p>
+                </div>
+            </div>
 
-    document.getElementById("list").innerHTML = "搜索中…";
+            <!-- 底部引导 -->
+            <div class="mt-12 bg-orange-50 rounded-2xl p-6 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-orange-800">加入资源通知群</h4>
+                    <p class="text-sm text-orange-600 opacity-80">每天更新最新影视路径，永不迷路</p>
+                </div>
+                <button onclick="showGroup()" class="bg-orange-500 text-white px-5 py-2 rounded-lg font-bold shadow-sm">立即加入</button>
+            </div>
+        </div>
+    </main>
 
-    try {
-      const res = await fetch(API + encodeURIComponent(kw));
-      const json = await res.json();
+    <!-- 弹窗：群二维码/联系方式 -->
+    <div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center">
+            <h3 class="text-2xl font-bold mb-2">扫码加群</h3>
+            <p class="text-gray-500 text-sm mb-6">实时获取最新观看路径指引</p>
+            <div class="w-48 h-48 bg-gray-100 mx-auto rounded-2xl flex items-center justify-center mb-6 border-2 border-gray-50">
+                <span class="text-gray-400">请替换您的二维码</span>
+            </div>
+            <p class="text-sm font-medium text-gray-800 mb-8">微信号：YourIDHere</p>
+            <button onclick="hideGroup()" class="w-full py-3 bg-gray-100 rounded-xl font-bold text-gray-600">关闭窗口</button>
+        </div>
+    </div>
 
-      const raw = json.data || [];
-      const list = raw.map(normalize);
+    <!-- 页脚 -->
+    <footer class="py-10 text-center text-gray-400 text-xs">
+        <p>© 2025 PanSou 搜索入口 - 仅限搜索逻辑演示与学习</p>
+        <div class="mt-2 flex justify-center gap-4 text-blue-600/50">
+            <a href="#">免责声明</a>
+            <a href="#">联系我们</a>
+        </div>
+    </footer>
 
-      const aliyun = list.filter(i => i.source === "aliyun");
-      const others = list.filter(i => i.source !== "aliyun");
+    <script>
+        // 初始化 Lucide 图标
+        lucide.createIcons();
 
-      render([...aliyun, ...others]);
-    } catch (e) {
-      document.getElementById("list").innerHTML = "搜索失败";
-    }
-  }
+        // 搜索逻辑
+        function handleSearch() {
+            const val = document.getElementById('keyword').value.trim();
+            if (!val) {
+                // 不使用 alert，改用简单的控制台输出或直接静默处理
+                return;
+            }
+            // 展现路径选择区域
+            document.getElementById('path-container').style.display = 'block';
+            document.getElementById('tags').style.display = 'none';
+            // 平滑滚动
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+        }
 
-  function render(items) {
-    const box = document.getElementById("list");
-    box.innerHTML = "";
+        // 快速搜索
+        function quickSearch(word) {
+            document.getElementById('keyword').value = word;
+            handleSearch();
+        }
 
-    if (items.length === 0) {
-      box.innerHTML = "暂无结果";
-      return;
-    }
+        // 核心跳转逻辑（拼写 URL）
+        function go(type) {
+            const query = encodeURIComponent(document.getElementById('keyword').value.trim());
+            let url = '';
+            
+            if (type === 'ali') {
+                url = `https://www.aliyundrive.com/search?q=${query}`;
+            } else if (type === 'quark') {
+                url = `https://pan.quark.cn/search?q=${query}`;
+            } else if (type === 'backup') {
+                url = `https://so.252035.xyz/?q=${query}`;
+            }
 
-    items.forEach(i => {
-      const div = document.createElement("div");
-      div.className = "result" + (i.source === "aliyun" ? " aliyun" : "");
-      div.innerHTML = `
-        <div><b>${i.name}</b></div>
-        <div class="source">来源：${sourceName(i.source)}</div>
-        <div><a href="${i.link}" target="_blank">打开资源</a></div>
-      `;
-      box.appendChild(div);
-    });
-  }
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
 
-  function sourceName(s) {
-    if (s === "aliyun") return "阿里云盘（推荐）";
-    if (s === "quark") return "夸克云盘";
-    if (s === "baidu") return "百度网盘";
-    if (s === "magnet") return "磁力";
-    return s;
-  }
-</script>
+        // 群展示逻辑
+        function showGroup() { document.getElementById('modal').classList.remove('hidden'); }
+        function hideGroup() { document.getElementById('modal').classList.add('hidden'); }
+
+        window.onload = function() {
+            console.log("Pansou Path Edition Ready.");
+        }
+    </script>
 </body>
 </html>
