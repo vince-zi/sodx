@@ -1,211 +1,371 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>盘搜 - 全网云盘资源导航入口</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root { --primary: #0066ff; --aliyun: #0052ff; --quark: #121212; }
-        body { background-color: #ffffff; color: #1a1a1a; -webkit-tap-highlight-color: transparent; }
-        .search-box-shadow { shadow-sm; border: 1px solid #e5e7eb; transition: all 0.3s; }
-        .search-box-shadow:focus-within { shadow-lg; border-color: var(--primary); }
-        .platform-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
-        .platform-card:active { transform: scale(0.98); }
-        #path-container { display: none; }
-        .gradient-text { background: linear-gradient(90deg, #0066ff, #00c6ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col font-sans">
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, ExternalLink, Copy, X, 
+  Cloud, Disc, HardDrive, Zap, Database, 
+  Loader2, Flame, Gift, Play, Archive, CheckCircle2
+} from 'lucide-react';
 
-    <!-- 导航栏 -->
-    <nav class="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                <i data-lucide="search" class="w-5 h-5"></i>
+const DEFAULT_API = "sodx.zeabur.app";
+
+// 你的推广链接 (仅在拦截弹窗中使用)
+const COMMISSION_LINK = "https://pages.aliyundrive.com/mobile-page/web/commission.html?disableNav=YES";
+
+// 拦截词库
+const BLOCK_LIST = [
+  "色情", "av", "AV", "色诱", "淫", "荡", "乱伦", "偷拍", "露点", 
+  "强奸", "裸聊", "毒品", "赌博", "萝莉", "幼女", "嫩模", 
+  "三级", "禁片", "枪支", "迷药", "h漫", "本子", "福利姬"
+];
+
+const checkSafety = (text) => {
+  const hit = BLOCK_LIST.find(word => text.toLowerCase().includes(word.toLowerCase()));
+  return hit;
+};
+
+// --- 网盘配置扩充 ---
+const PROVIDERS = {
+  aliyun: {
+    id: 'aliyun',
+    name: '阿里云盘',
+    icon: <Cloud size={14} />,
+    // 暖橙流光 - 主角
+    style: 'bg-gradient-to-br from-orange-500/10 to-amber-500/5 text-orange-400 border-orange-500/30 hover:border-orange-400 hover:shadow-[0_0_20px_rgba(249,115,22,0.2)]',
+    activeStyle: 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-500/40 border-transparent',
+    match: (url) => url.includes('alipan.com') || url.includes('aliyundrive.com')
+  },
+  quark: {
+    id: 'quark',
+    name: '夸克',
+    icon: <Disc size={14} />,
+    style: 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20',
+    activeStyle: 'bg-blue-600 text-white border-transparent',
+    match: (url) => url.includes('pan.quark.cn')
+  },
+  baidu: {
+    id: 'baidu',
+    name: '百度',
+    icon: <HardDrive size={14} />,
+    style: 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20',
+    activeStyle: 'bg-red-600 text-white border-transparent',
+    match: (url) => url.includes('pan.baidu.com')
+  },
+  xunlei: {
+    id: 'xunlei',
+    name: '迅雷',
+    icon: <Zap size={14} />,
+    style: 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20',
+    activeStyle: 'bg-sky-500 text-white border-transparent',
+    match: (url) => url.includes('pan.xunlei.com')
+  },
+  '115': {
+    id: '115',
+    name: '115',
+    icon: <Archive size={14} />,
+    style: 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20',
+    activeStyle: 'bg-indigo-500 text-white border-transparent',
+    match: (url) => url.includes('115.com')
+  },
+  other: {
+    id: 'other',
+    name: '其他',
+    icon: <Database size={14} />,
+    style: 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20',
+    activeStyle: 'bg-slate-600 text-white border-transparent',
+    match: () => true 
+  }
+};
+
+const App = () => {
+  const [keyword, setKeyword] = useState('');
+  const [allItems, setAllItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+  const [activeTab, setActiveTab] = useState('all');
+  const [counts, setCounts] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [apiUrl, setApiUrl] = useState(DEFAULT_API);
+  
+  const [showSettings, setShowSettings] = useState(false);
+  const [secretCount, setSecretCount] = useState(0);
+  const [downloadModal, setDownloadModal] = useState({ show: false, url: '' });
+
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('pansou_custom_api');
+    if (savedUrl) setApiUrl(savedUrl);
+  }, []);
+
+  const handleSecret = () => {
+    setSecretCount(p => p + 1);
+    if (secretCount + 1 >= 5) {
+      setShowSettings(true);
+      setSecretCount(0);
+    }
+    setTimeout(() => setSecretCount(0), 3000);
+  };
+
+  const getSafeUrl = () => {
+    let url = apiUrl.trim();
+    if (!url.startsWith('http')) url = `https://${url}`;
+    if (url.endsWith('/')) url = url.slice(0, -1);
+    return url;
+  };
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!keyword.trim()) return;
+
+    const dangerWord = checkSafety(keyword);
+    if (dangerWord) {
+      setError(`关键词包含违规内容，系统已自动拦截。`);
+      setAllItems([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setAllItems([]);
+    setFilteredItems([]);
+    setCounts({});
+
+    try {
+      const targetUrl = `${getSafeUrl()}/api/search?kw=${encodeURIComponent(keyword)}&res=merge`;
+      const response = await fetch(targetUrl);
+      const rawText = await response.text();
+      let data;
+      try { data = JSON.parse(rawText); } catch (e) { throw new Error("API Error"); }
+
+      let rawList = [];
+      if (data?.data?.merged_by_type) {
+        Object.values(data.data.merged_by_type).forEach(arr => { if (Array.isArray(arr)) rawList = [...rawList, ...arr]; });
+      } else if (data?.data && Array.isArray(data.data)) rawList = data.data;
+      else if (data?.list && Array.isArray(data.list)) rawList = data.list;
+      else if (Array.isArray(data)) rawList = data;
+
+      const processedList = rawList.map(item => {
+        const url = item.url || "";
+        let provider = 'other';
+        for (const key in PROVIDERS) {
+          if (key !== 'other' && PROVIDERS[key].match(url)) {
+            provider = key;
+            break;
+          }
+        }
+        return {
+          name: item.note || item.name || "未知资源",
+          url, provider,
+          time: item.datetime || item.time || ""
+        };
+      }).filter(item => item.url && item.url.startsWith('http'));
+
+      if (processedList.length === 0) setError("未找到资源");
+
+      setAllItems(processedList);
+
+      const newCounts = { all: processedList.length };
+      processedList.forEach(item => {
+        newCounts[item.provider] = (newCounts[item.provider] || 0) + 1;
+      });
+      setCounts(newCounts);
+
+      // 搜索后优先显示阿里云
+      if (newCounts['aliyun'] > 0) {
+        setActiveTab('aliyun');
+        setFilteredItems(processedList.filter(i => i.provider === 'aliyun'));
+      } else {
+        setActiveTab('all');
+        setFilteredItems(processedList);
+      }
+
+    } catch (err) {
+      setError("网络请求失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchTab = (tabId) => {
+    setActiveTab(tabId);
+    setFilteredItems(tabId === 'all' ? allItems : allItems.filter(i => i.provider === tabId));
+  };
+
+  const handleItemClick = (item) => {
+    if (item.provider === 'aliyun') {
+      setDownloadModal({ show: true, url: item.url });
+    } else {
+      window.open(item.url, '_blank');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#050301] text-slate-200 font-sans selection:bg-orange-500/30 overflow-x-hidden">
+      
+      {/* 极简背景氛围 */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-800/20 via-[#0a0500] to-[#050301]"></div>
+      </div>
+
+      {/* 隐形导航 (仅保留左上角隐形按钮) */}
+      <nav className="fixed top-0 w-full z-50 px-6 py-6 pointer-events-none">
+        <button 
+          onClick={handleSecret}
+          className="pointer-events-auto p-4 opacity-0 hover:opacity-100 transition-opacity"
+        >
+          <Cloud size={24} className="text-white/10" />
+        </button>
+      </nav>
+
+      <main className="relative z-10 pt-32 pb-20 px-4 md:px-0">
+        
+        <div className="max-w-xl mx-auto text-center mb-10">
+          
+          {/* 搜索框 */}
+          <div className="relative group max-w-lg mx-auto mb-16">
+            {/* 呼吸灯效 - 暖橙色 */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 via-amber-600 to-red-600 rounded-[2rem] blur-xl opacity-20 group-focus-within:opacity-50 animate-pulse transition duration-1000"></div>
+            
+            <form onSubmit={handleSearch} className="relative flex items-center bg-[#120a05]/90 backdrop-blur-xl border border-orange-500/20 rounded-[1.5rem] p-1.5 shadow-2xl transition-all focus-within:border-orange-500/50">
+              <div className="pl-5 text-orange-500/60 group-focus-within:text-orange-400 transition-colors">
+                <Search size={22} />
+              </div>
+              <input 
+                type="text" 
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="搜你所想..." 
+                className="w-full h-12 px-4 bg-transparent outline-none text-white text-lg placeholder:text-white/10 font-bold text-center tracking-wide"
+              />
+              <button 
+                type="submit"
+                disabled={loading}
+                className="h-12 px-6 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-2xl font-black transition-all shadow-lg shadow-orange-900/40 active:scale-95 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : "GO"}
+              </button>
+            </form>
+          </div>
+
+          {/* --- 首页纯视觉广告 (无链接，纯酷炫) --- */}
+          {!loading && allItems.length === 0 && !error && (
+            <div className="animate-in fade-in zoom-in duration-1000 select-none cursor-default">
+              
+              {/* 第一行：超大号霓虹字 */}
+              <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter mb-4">
+                <span className="text-transparent bg-clip-text bg-gradient-to-br from-orange-400 via-amber-200 to-orange-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                  阿里云盘
+                </span>
+              </h1>
+              
+              {/* 第二行：白色发光副标 */}
+              <h2 className="text-2xl md:text-3xl font-black text-white/90 tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                不用会员也能看
+              </h2>
+
+              {/* 第三行：装饰性元素 (非按钮) */}
+              <div className="mt-8 flex justify-center opacity-50">
+                 <div className="w-16 h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent rounded-full"></div>
+              </div>
             </div>
-            <span class="font-bold text-xl tracking-tight">Pan<span class="text-blue-600">Sou</span></span>
-        </div>
-        <div class="hidden md:flex gap-6 text-sm font-medium text-gray-500">
-            <a href="#" class="hover:text-blue-600">使用指南</a>
-            <a href="#" class="hover:text-blue-600">加入交流群</a>
-            <a href="#" class="text-orange-500 font-bold">领取阿里云会员</a>
-        </div>
-    </nav>
-
-    <!-- 主搜索区 -->
-    <main class="flex-grow flex flex-col items-center pt-12 md:pt-24 px-4">
-        <div class="w-full max-w-2xl text-center mb-8">
-            <h2 class="text-3xl md:text-5xl font-extrabold mb-4">
-                你想看什么？<span class="gradient-text">即刻出发。</span>
-            </h2>
-            <p class="text-gray-400 text-sm md:text-base">聚合阿里云盘、夸克云盘等官方搜索入口，为您规划最优观看路径</p>
+          )}
         </div>
 
-        <!-- 搜索框 -->
-        <div class="w-full max-w-2xl px-2">
-            <div class="search-box-shadow flex items-center bg-gray-50 rounded-2xl p-2 pl-5 mb-4">
-                <i data-lucide="search" class="text-gray-400 w-6 h-6"></i>
-                <input type="text" id="keyword" 
-                    placeholder="输入电影、电视剧、动漫、软件名称..." 
-                    class="flex-grow bg-transparent border-none outline-none px-4 py-4 text-lg"
-                    onkeyup="if(event.keyCode==13) handleSearch()">
-                <button onclick="handleSearch()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md">
-                    搜索
+        {/* 错误提示 */}
+        {error && (
+          <div className="max-w-md mx-auto mb-8 p-3 bg-red-900/20 border border-red-500/20 rounded-lg text-center text-red-400 text-sm animate-in fade-in">
+             {error}
+          </div>
+        )}
+
+        {/* 分类标签 (新增了115和迅雷) */}
+        {!loading && allItems.length > 0 && (
+          <div className="max-w-5xl mx-auto mb-6 flex justify-center flex-wrap gap-2 animate-in slide-in-from-bottom-2">
+            {Object.keys(PROVIDERS).map(key => {
+              const count = counts[key] || 0;
+              if (count === 0 && key !== 'other') return null;
+              const p = PROVIDERS[key];
+              const isActive = activeTab === key;
+              return (
+                <button key={key} onClick={() => switchTab(key)} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${isActive ? p.activeStyle : p.style + ' bg-white/5'}`}>
+                  {p.icon} {p.name} <span className="opacity-60 text-[10px]">{count}</span>
                 </button>
-            </div>
-            
-            <!-- 热搜/提示标签 -->
-            <div class="flex flex-wrap gap-2 px-2 text-xs text-gray-400" id="tags">
-                <span>大家都在搜：</span>
-                <button onclick="quickSearch('流浪地球2')" class="hover:text-blue-600">流浪地球2</button>
-                <button onclick="quickSearch('三体')" class="hover:text-blue-600">三体</button>
-                <button onclick="quickSearch('黑神话悟空')" class="hover:text-blue-600">黑神话悟空</button>
-            </div>
-        </div>
+              )
+            })}
+             <button onClick={() => switchTab('all')} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${activeTab === 'all' ? 'bg-slate-700 text-white border-transparent' : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'}`}>
+              全部
+            </button>
+          </div>
+        )}
 
-        <!-- 路径选择结果页 (搜索后显示) -->
-        <div id="path-container" class="w-full max-w-2xl mt-12 px-2 pb-20">
-            <div class="flex items-center gap-2 mb-6 text-gray-800">
-                <i data-lucide="map-pin" class="w-5 h-5 text-blue-600"></i>
-                <span class="font-bold text-lg">为您规划的最优路径：</span>
-            </div>
+        {/* 结果列表 */}
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filteredItems.map((item, idx) => {
+            const p = PROVIDERS[item.provider];
+            const isAliyun = item.provider === 'aliyun';
 
-            <div class="grid gap-4">
-                <!-- 路径1：阿里云 (主推) -->
-                <div onclick="go('ali')" class="platform-card animate-slide-up group bg-white border-2 border-blue-600 rounded-2xl p-5 shadow-sm hover:shadow-md">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                                <i data-lucide="tv"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-xl text-gray-900 flex items-center gap-2">
-                                    阿里云盘路径
-                                    <span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase">最稳</span>
-                                </h3>
-                                <p class="text-sm text-gray-500 mt-1">适合大文件、高清 4K 原画，电视端播放首选</p>
-                            </div>
-                        </div>
-                        <i data-lucide="chevron-right" class="text-gray-300 group-hover:text-blue-600 transition-colors"></i>
+            return (
+              <div key={idx} className={`group relative backdrop-blur-md border rounded-2xl p-4 transition-all duration-300 active:scale-[0.99] ${isAliyun ? 'bg-[#120804]/90 border-orange-500/30 shadow-[0_4px_20px_-5px_rgba(249,115,22,0.15)]' : 'bg-[#18181b]/60 border-white/5'}`}>
+                {isAliyun && (
+                  <div className="absolute -top-px -right-px px-2 py-0.5 bg-orange-600/20 rounded-bl-lg border-b border-l border-orange-500/20">
+                    <span className="text-[9px] font-bold text-orange-400 flex items-center gap-1"><Flame size={8} fill="currentColor" />极速</span>
+                  </div>
+                )}
+                <div className="flex gap-3 items-center">
+                  <div className={`p-2.5 rounded-xl shrink-0 ${isAliyun ? 'bg-orange-500/10 text-orange-500' : 'bg-white/5 text-slate-500'}`}>{p.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-bold text-sm truncate pr-4 mb-1 ${isAliyun ? 'text-orange-50' : 'text-slate-300'}`}>{item.name}</h3>
+                    <div className="flex items-center gap-2">
+                       <span className={`text-[9px] px-1.5 py-0.5 rounded border ${isAliyun ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/5 text-slate-500'}`}>{p.name}</span>
+                       {item.time && <span className="text-[9px] text-slate-500 font-mono">{item.time.replace('T', ' ').substring(0, 10)}</span>}
                     </div>
-                    <!-- 转化区 -->
-                    <div class="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-2 text-blue-600 font-medium">
-                            <i data-lucide="gift" class="w-4 h-4"></i>
-                            <span>领取专享 8 元开通会员福利</span>
-                        </div>
-                        <span class="text-gray-400">官方直达搜索</span>
-                    </div>
+                  </div>
                 </div>
-
-                <!-- 路径2：夸克 -->
-                <div onclick="go('quark')" class="platform-card animate-slide-up bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md" style="animation-delay: 0.1s">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center text-white">
-                                <i data-lucide="smartphone"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-xl text-gray-900">夸克云盘路径</h3>
-                                <p class="text-sm text-gray-500 mt-1">手机端观看体验极佳，自带倍速与解压功能</p>
-                            </div>
-                        </div>
-                        <i data-lucide="chevron-right" class="text-gray-300"></i>
-                    </div>
+                <div className="mt-4 flex gap-2 opacity-80">
+                   <button onClick={() => navigator.clipboard.writeText(item.url).then(()=>alert("已复制"))} className="flex-1 py-2 bg-white/5 rounded-lg text-[10px] font-bold text-slate-400">复制</button>
+                   <button onClick={() => handleItemClick(item)} className={`flex-1 py-2 rounded-lg text-[10px] font-bold text-white shadow-lg ${isAliyun ? 'bg-gradient-to-r from-orange-600 to-amber-600' : 'bg-slate-700'}`}>打开</button>
                 </div>
-
-                <!-- 路径3：备用 -->
-                <div onclick="go('backup')" class="platform-card animate-slide-up bg-gray-50 rounded-2xl p-4 text-center border border-dashed border-gray-200" style="animation-delay: 0.2s">
-                    <p class="text-sm text-gray-400">找不到？试试 <span class="text-blue-600 underline font-medium">全网聚合搜索入口</span></p>
-                </div>
-            </div>
-
-            <!-- 底部引导 -->
-            <div class="mt-12 bg-orange-50 rounded-2xl p-6 flex items-center justify-between">
-                <div>
-                    <h4 class="font-bold text-orange-800">加入资源通知群</h4>
-                    <p class="text-sm text-orange-600 opacity-80">每天更新最新影视路径，永不迷路</p>
-                </div>
-                <button onclick="showGroup()" class="bg-orange-500 text-white px-5 py-2 rounded-lg font-bold shadow-sm">立即加入</button>
-            </div>
+              </div>
+            )
+          })}
         </div>
-    </main>
+      </main>
 
-    <!-- 弹窗：群二维码/联系方式 -->
-    <div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center">
-            <h3 class="text-2xl font-bold mb-2">扫码加群</h3>
-            <p class="text-gray-500 text-sm mb-6">实时获取最新观看路径指引</p>
-            <div class="w-48 h-48 bg-gray-100 mx-auto rounded-2xl flex items-center justify-center mb-6 border-2 border-gray-50">
-                <span class="text-gray-400">请替换您的二维码</span>
-            </div>
-            <p class="text-sm font-medium text-gray-800 mb-8">微信号：YourIDHere</p>
-            <button onclick="hideGroup()" class="w-full py-3 bg-gray-100 rounded-xl font-bold text-gray-600">关闭窗口</button>
+      {/* 变现拦截弹窗 (精简文案版) */}
+      {downloadModal.show && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-sm p-8 animate-in fade-in">
+          <div className="bg-[#120a05] w-full max-w-sm rounded-3xl border border-orange-500/40 p-8 relative shadow-[0_0_60px_rgba(234,88,12,0.4)] animate-in zoom-in-95">
+             <button onClick={() => setDownloadModal({show:false, url:''})} className="absolute top-4 right-4 text-slate-600 hover:text-white"><X size={20}/></button>
+             <div className="text-center">
+                <div className="inline-block p-4 rounded-full bg-orange-500/10 text-orange-500 mb-6 animate-bounce"><Gift size={32} fill="currentColor" /></div>
+                
+                {/* 你的极简文案 */}
+                <h3 className="text-xl font-black text-white mb-6">
+                  不用会员也能看，不限速！
+                </h3>
+
+                <div className="space-y-3">
+                  <a href={COMMISSION_LINK} target="_blank" rel="noopener noreferrer" onClick={() => setDownloadModal({show:false, url:''})} className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-black rounded-xl shadow-lg shadow-orange-900/40 active:scale-95 transition-all text-sm">
+                    <Play size={16} fill="currentColor" /> 前往观看
+                  </a>
+                  <a href={downloadModal.url} target="_blank" rel="noopener noreferrer" onClick={() => setDownloadModal({show:false, url:''})} className="block w-full py-2 text-[10px] font-bold text-slate-600 hover:text-white transition-colors">
+                    已安装，直接前往 &gt;
+                  </a>
+                </div>
+             </div>
+          </div>
         </div>
+      )}
+
+      {/* 隐形设置 */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 p-8">
+          <div className="bg-[#111] p-6 rounded-2xl w-full max-w-sm border border-white/10">
+            <h3 className="font-bold text-white mb-4">API Config</h3>
+            <input value={apiUrl} onChange={e => {setApiUrl(e.target.value); localStorage.setItem('pansou_custom_api', e.target.value)}} className="w-full bg-black border border-white/20 p-3 text-white rounded-lg text-xs font-mono outline-none focus:border-orange-500"/>
+            <button onClick={() => setShowSettings(false)} className="mt-4 w-full py-3 bg-white text-black font-bold rounded-lg text-xs">保存</button>
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
 
-    <!-- 页脚 -->
-    <footer class="py-10 text-center text-gray-400 text-xs">
-        <p>© 2025 PanSou 搜索入口 - 仅限搜索逻辑演示与学习</p>
-        <div class="mt-2 flex justify-center gap-4 text-blue-600/50">
-            <a href="#">免责声明</a>
-            <a href="#">联系我们</a>
-        </div>
-    </footer>
-
-    <script>
-        // 初始化 Lucide 图标
-        lucide.createIcons();
-
-        // 搜索逻辑
-        function handleSearch() {
-            const val = document.getElementById('keyword').value.trim();
-            if (!val) {
-                // 不使用 alert，改用简单的控制台输出或直接静默处理
-                return;
-            }
-            // 展现路径选择区域
-            document.getElementById('path-container').style.display = 'block';
-            document.getElementById('tags').style.display = 'none';
-            // 平滑滚动
-            window.scrollTo({ top: 300, behavior: 'smooth' });
-        }
-
-        // 快速搜索
-        function quickSearch(word) {
-            document.getElementById('keyword').value = word;
-            handleSearch();
-        }
-
-        // 核心跳转逻辑（拼写 URL）
-        function go(type) {
-            const query = encodeURIComponent(document.getElementById('keyword').value.trim());
-            let url = '';
-            
-            if (type === 'ali') {
-                url = `https://www.aliyundrive.com/search?q=${query}`;
-            } else if (type === 'quark') {
-                url = `https://pan.quark.cn/search?q=${query}`;
-            } else if (type === 'backup') {
-                url = `https://so.252035.xyz/?q=${query}`;
-            }
-
-            if (url) {
-                window.open(url, '_blank');
-            }
-        }
-
-        // 群展示逻辑
-        function showGroup() { document.getElementById('modal').classList.remove('hidden'); }
-        function hideGroup() { document.getElementById('modal').classList.add('hidden'); }
-
-        window.onload = function() {
-            console.log("Pansou Path Edition Ready.");
-        }
-    </script>
-</body>
-</html>
+export default App;
