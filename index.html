@@ -15,6 +15,8 @@
             border: 1px solid rgba(245, 158, 11, 0.4); 
             box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.2);
         }
+        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
+        @keyframes dots { 0%, 20% { content: ' .'; } 40% { content: ' ..'; } 60% { content: ' ...'; } 80%, 100% { content: ''; } }
     </style>
 </head>
 <body class="text-slate-300 antialiased">
@@ -26,19 +28,17 @@
             </div>
             <span class="text-lg font-black text-white italic tracking-tighter uppercase">Ultra Pan</span>
         </div>
-        <div id="statusIndicator" class="text-[10px] font-bold text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-            ENGINE READY
-        </div>
+        <button onclick="testBackend()" class="text-[9px] font-bold text-slate-500 border border-white/10 px-2 py-1 rounded">诊断</button>
     </nav>
 
     <main class="max-w-xl mx-auto px-5 py-8">
         <div class="text-center mb-10">
-            <h1 class="text-3xl font-black text-white mb-6 leading-tight">全网聚合 <span class="text-amber-500 italic">臻彩</span> 搜索</h1>
+            <h1 class="text-3xl font-black text-white mb-6 leading-tight font-serif italic">EXPLORE <span class="text-amber-500">UHD</span></h1>
             <div class="relative group">
                 <div class="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl blur opacity-30"></div>
                 <div class="relative flex items-center bg-[#18181b] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                     <div class="pl-4 text-slate-500"><i data-lucide="search" class="w-5 h-5"></i></div>
-                    <input type="text" id="searchInput" placeholder="搜：死侍、异形、4K..." 
+                    <input type="text" id="searchInput" placeholder="搜索 4K 臻彩资源..." 
                            class="w-full bg-transparent border-none py-4 px-3 text-base text-white outline-none focus:ring-0">
                     <button id="searchBtn" class="mr-2 bg-white text-black font-bold px-6 py-2 rounded-xl active:scale-95 transition-all">搜索</button>
                 </div>
@@ -46,30 +46,43 @@
         </div>
 
         <div id="resultsList" class="space-y-4 pb-32">
+            <!-- 初始欢迎 -->
             <div class="py-20 text-center opacity-40">
-                <i data-lucide="sparkles" class="w-10 h-10 mx-auto mb-4 text-amber-500"></i>
-                <p class="text-sm">优先显示阿里云盘杜比视听资源</p>
+                <i data-lucide="video" class="w-10 h-10 mx-auto mb-4 text-amber-500/50"></i>
+                <p class="text-sm tracking-widest font-bold">READY TO SEARCH</p>
+                <p class="text-[10px] mt-1 uppercase">80T Aliyun Storage Integrated</p>
             </div>
         </div>
     </main>
 
-    <!-- 底部群引导 -->
+    <!-- 底部悬浮 -->
     <div class="fixed bottom-6 left-5 right-5 z-50">
         <div class="glass p-4 rounded-2xl flex items-center justify-between border border-amber-500/20">
             <div class="flex items-center gap-3">
-                <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500"><i data-lucide="users" class="w-5 h-5"></i></div>
+                <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500"><i data-lucide="star" class="w-5 h-5"></i></div>
                 <div>
                     <p class="text-sm font-bold text-white leading-none mb-1">加入内部 80T 放映室</p>
-                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-tight">每日更新 4K 臻彩资源</p>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-tight">Daily Updates / Dolby Atmos</p>
                 </div>
             </div>
-            <button class="bg-amber-500 text-black text-xs font-black px-5 py-2.5 rounded-lg active:scale-90 transition-transform shadow-lg shadow-amber-500/20">立即进群</button>
+            <button class="bg-amber-500 text-black text-[10px] font-black px-4 py-2 rounded-lg active:scale-90">JOIN NOW</button>
         </div>
     </div>
 
     <script>
-        // 核心配置
-        const BACKEND_URL = "https://so42088.zeabur.app/search";
+        const RAW_BACKEND = "https://so42088.zeabur.app/search";
+        
+        // 诊断后端是否存活
+        async function testBackend() {
+            alert("正在诊断后端： " + RAW_BACKEND);
+            try {
+                const res = await fetch(RAW_BACKEND + "?q=test").catch(e => ({ok: false}));
+                if(res.ok) alert("✅ 后端直连正常！");
+                else alert("❌ 后端直连失败，将尝试使用代理通道。");
+            } catch(e) {
+                alert("❌ 诊断出错: " + e.message);
+            }
+        }
 
         async function handleSearch() {
             const input = document.getElementById('searchInput');
@@ -78,46 +91,61 @@
 
             if (!query) return;
             input.blur();
-            list.innerHTML = `<div class="py-20 text-center"><div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div><p class="mt-4 text-xs font-bold text-slate-500 uppercase tracking-widest">正在穿透安全防火墙...</p></div>`;
+            list.innerHTML = `<div class="py-20 text-center text-amber-500"><div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest loading-dots">Connecting to Pansou Engine</p></div>`;
 
-            try {
-                // 尝试直接请求
-                let response = await fetch(`${BACKEND_URL}?q=${encodeURIComponent(query)}`).catch(e => null);
-                
-                // 如果直接请求失败（CORS拦截），则使用 AllOrigins 代理中转
-                if (!response || !response.ok) {
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(BACKEND_URL + '?q=' + query)}`;
-                    const proxyResponse = await fetch(proxyUrl);
-                    const proxyData = await proxyResponse.json();
-                    // AllOrigins 返回的内容在 contents 字段里，需要 JSON.parse
-                    const realData = JSON.parse(proxyData.contents);
-                    processResults(realData);
-                } else {
-                    const data = await response.json();
-                    processResults(data);
+            // 策略：尝试多个中转通道
+            const urls = [
+                `${RAW_BACKEND}?q=${encodeURIComponent(query)}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(RAW_BACKEND + '?q=' + query)}`,
+                `https://corsproxy.io/?${encodeURIComponent(RAW_BACKEND + '?q=' + query)}`
+            ];
+
+            let success = false;
+
+            for (let url of urls) {
+                try {
+                    console.log("正在尝试通道:", url);
+                    const response = await fetch(url);
+                    if (!response.ok) continue;
+
+                    let data;
+                    if (url.includes('allorigins')) {
+                        const json = await response.json();
+                        data = JSON.parse(json.contents);
+                    } else {
+                        data = await response.json();
+                    }
+
+                    const items = data.list || data || [];
+                    if (items.length >= 0) {
+                        displayItems(items);
+                        success = true;
+                        break;
+                    }
+                } catch (e) {
+                    console.error("通道失效:", url, e);
                 }
-            } catch (err) {
-                console.error(err);
+            }
+
+            if (!success) {
                 list.innerHTML = `
-                    <div class="py-20 text-center text-red-400 bg-red-500/5 rounded-3xl border border-red-500/10 p-6">
-                        <i data-lucide="alert-circle" class="w-10 h-10 mx-auto mb-4"></i>
-                        <p class="font-bold text-sm mb-2">连接引擎失败</p>
-                        <p class="text-xs opacity-70">请确保 Zeabur 后端 Variables 中设置了 CORS_ALLOW_ORIGIN 为 * 并点击了 Redeploy。</p>
+                    <div class="py-20 text-center text-red-500/80 p-6 bg-red-500/5 rounded-3xl border border-red-500/10">
+                        <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-4"></i>
+                        <p class="font-bold text-sm uppercase">Engine Error</p>
+                        <p class="text-[10px] mt-2 opacity-60">Zeabur 响应超时或跨域限制。请确保后端 Variables 中 CORS_ALLOW_ORIGIN 为 * 并已 Redeploy。</p>
                     </div>
                 `;
             }
         }
 
-        function processResults(data) {
+        function displayItems(items) {
             const list = document.getElementById('resultsList');
-            const items = data.list || data || [];
-
             if (items.length === 0) {
-                list.innerHTML = `<div class="py-20 text-center opacity-50"><p>未找到该资源，换个词试试</p></div>`;
+                list.innerHTML = `<div class="py-20 text-center opacity-40 italic text-sm">No results found. Try another keyword.</div>`;
                 return;
             }
 
-            // 阿里云盘置顶算法
+            // 阿里云置顶
             items.sort((a, b) => {
                 const isAAli = (a.source && a.source.includes('阿里')) || (a.link && a.link.includes('aliyundrive'));
                 const isBAli = (b.source && b.source.includes('阿里')) || (b.link && b.link.includes('aliyundrive'));
@@ -129,18 +157,18 @@
                 const isAli = (item.source && item.source.includes('阿里')) || (item.link && item.link.includes('aliyundrive'));
                 html += `
                     <div class="p-5 rounded-2xl mb-3 transition-all ${isAli ? 'aliyun-card' : 'bg-white/[0.02] border border-white/5 opacity-70'}">
-                        <div class="flex flex-col gap-3">
+                        <div class="flex flex-col gap-3 text-left">
                             <div class="flex items-center gap-2">
-                                <span class="px-2 py-0.5 rounded-[4px] text-[9px] font-black ${isAli ? 'bg-amber-500 text-black' : 'bg-white/10 text-slate-500'} uppercase">${item.source || '全网'}</span>
-                                <span class="text-[9px] font-mono text-slate-600 font-bold">${item.size || '80T'}</span>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-black ${isAli ? 'bg-amber-500 text-black' : 'bg-white/10 text-slate-500'} uppercase">${item.source || 'CLOUD'}</span>
+                                <span class="text-[9px] font-mono text-slate-600 font-bold">${item.size || 'HD'}</span>
                             </div>
-                            <h3 class="text-base font-bold leading-tight ${isAli ? 'text-white' : 'text-slate-400'}">${item.title}</h3>
-                            <div class="flex flex-wrap gap-2">
-                                ${item.title.includes('4K') || item.title.includes('臻彩') ? '<span class="text-[9px] font-bold text-amber-500 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10 tracking-tight italic">PREMIUM 4K</span>' : ''}
-                                ${item.title.includes('杜比') ? '<span class="text-[9px] font-bold text-sky-400 bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 tracking-tight italic">DOLBY ATMOS</span>' : ''}
+                            <h3 class="text-sm font-bold leading-snug ${isAli ? 'text-white' : 'text-slate-400'}">${item.title}</h3>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                ${item.title.includes('4K') || item.title.includes('臻彩') ? '<span class="text-[8px] font-black text-amber-500/80 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase tracking-tighter">Premium 4K</span>' : ''}
+                                ${item.title.includes('杜比') ? '<span class="text-[8px] font-black text-sky-500/80 border border-sky-500/30 px-1.5 py-0.5 rounded uppercase tracking-tighter">Dolby Atmos</span>' : ''}
                             </div>
-                            <a href="${item.link}" target="_blank" class="mt-2 w-full text-center py-3 rounded-xl text-xs font-black transition-all ${isAli ? 'bg-white text-black active:scale-95 shadow-lg shadow-amber-500/10' : 'bg-white/5 text-slate-500'}">
-                                ${isAli ? '存入我的阿里云盘' : '立即查看链接'}
+                            <a href="${item.link}" target="_blank" class="mt-2 w-full text-center py-3 rounded-xl text-[10px] font-black transition-all ${isAli ? 'bg-white text-black active:scale-95' : 'bg-white/5 text-slate-500'}">
+                                ${isAli ? 'SAVE TO ALIYUN DRIVE' : 'OPEN LINK'}
                             </a>
                         </div>
                     </div>
