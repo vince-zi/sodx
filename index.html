@@ -8,81 +8,76 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans SC', sans-serif; background-color: #09090b; }
-        .glass { background: rgba(18, 18, 20, 0.9); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #09090b; color: #cbd5e1; }
+        .glass-nav { background: rgba(18, 18, 20, 0.9); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .aliyun-card { 
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(9, 9, 11, 0) 100%); 
-            border: 1px solid rgba(245, 158, 11, 0.4); 
-            box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.2);
+            background: linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, rgba(18, 18, 20, 0.6) 100%); 
+            border: 1px solid rgba(245, 158, 11, 0.3); 
+            box-shadow: 0 8px 32px -8px rgba(245, 158, 11, 0.1);
         }
-        .loading-dots:after { content: ' .'; animation: dots 1.5s steps(5, end) infinite; }
-        @keyframes dots { 0%, 20% { content: ' .'; } 40% { content: ' ..'; } 60% { content: ' ...'; } 80%, 100% { content: ''; } }
+        .btn-glow:active { transform: scale(0.96); transition: 0.1s; }
+        input::placeholder { color: #475569; }
     </style>
 </head>
-<body class="text-slate-300 antialiased">
+<body class="antialiased min-h-screen">
 
-    <nav class="sticky top-0 z-50 glass px-6 py-4 flex items-center justify-between">
+    <!-- 顶部 -->
+    <nav class="sticky top-0 z-50 glass-nav px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-2">
-            <div class="bg-amber-500 p-1.5 rounded-lg">
+            <div class="bg-amber-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.4)]">
                 <i data-lucide="film" class="text-black w-5 h-5"></i>
             </div>
-            <span class="text-lg font-black text-white italic tracking-tighter uppercase">Ultra Pan</span>
+            <span class="text-xl font-black text-white italic tracking-tighter">ULTRA PAN</span>
         </div>
-        <button onclick="testBackend()" class="text-[9px] font-bold text-slate-500 border border-white/10 px-2 py-1 rounded">诊断</button>
+        <div class="flex items-center gap-2">
+            <span id="connStatus" class="text-[9px] font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">ENGINE LINKED</span>
+        </div>
     </nav>
 
     <main class="max-w-xl mx-auto px-5 py-8">
+        <!-- 搜索区域 -->
         <div class="text-center mb-10">
-            <h1 class="text-3xl font-black text-white mb-6 leading-tight font-serif italic">EXPLORE <span class="text-amber-500">UHD</span></h1>
+            <h1 class="text-3xl font-black text-white mb-6 tracking-tight">搜索 <span class="text-amber-500">臻彩</span> 4K 资源</h1>
             <div class="relative group">
-                <div class="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl blur opacity-30"></div>
-                <div class="relative flex items-center bg-[#18181b] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                <div class="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl blur opacity-20 transition"></div>
+                <div class="relative flex items-center bg-[#111113] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                     <div class="pl-4 text-slate-500"><i data-lucide="search" class="w-5 h-5"></i></div>
-                    <input type="text" id="searchInput" placeholder="搜索 4K 臻彩资源..." 
+                    <input type="text" id="searchInput" placeholder="搜：死侍、黑神话、周星驰..." 
                            class="w-full bg-transparent border-none py-4 px-3 text-base text-white outline-none focus:ring-0">
-                    <button id="searchBtn" class="mr-2 bg-white text-black font-bold px-6 py-2 rounded-xl active:scale-95 transition-all">搜索</button>
+                    <button id="searchBtn" class="mr-2 bg-white text-black font-bold px-6 py-2 rounded-xl btn-glow whitespace-nowrap">
+                        搜索
+                    </button>
                 </div>
             </div>
+            <p class="mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Powered by Pansou Aggregation Engine</p>
         </div>
 
+        <!-- 结果列表 -->
         <div id="resultsList" class="space-y-4 pb-32">
-            <!-- 初始欢迎 -->
             <div class="py-20 text-center opacity-40">
-                <i data-lucide="video" class="w-10 h-10 mx-auto mb-4 text-amber-500/50"></i>
-                <p class="text-sm tracking-widest font-bold">READY TO SEARCH</p>
-                <p class="text-[10px] mt-1 uppercase">80T Aliyun Storage Integrated</p>
+                <i data-lucide="sparkles" class="w-10 h-10 mx-auto mb-4 text-amber-500/50"></i>
+                <p class="text-sm font-bold">READY TO SEARCH</p>
             </div>
         </div>
     </main>
 
-    <!-- 底部悬浮 -->
-    <div class="fixed bottom-6 left-5 right-5 z-50">
-        <div class="glass p-4 rounded-2xl flex items-center justify-between border border-amber-500/20">
-            <div class="flex items-center gap-3">
-                <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500"><i data-lucide="star" class="w-5 h-5"></i></div>
+    <!-- 底部群引导 -->
+    <div class="fixed bottom-6 left-5 right-5 z-40">
+        <div class="glass-nav p-4 rounded-2xl flex items-center justify-between border border-amber-500/20 shadow-2xl">
+            <div class="flex items-center gap-3 text-left">
+                <div class="bg-amber-500/10 p-2.5 rounded-xl text-amber-500"><i data-lucide="crown" class="w-5 h-5"></i></div>
                 <div>
-                    <p class="text-sm font-bold text-white leading-none mb-1">加入内部 80T 放映室</p>
-                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-tight">Daily Updates / Dolby Atmos</p>
+                    <p class="text-sm font-bold text-white">加入内部 80T 放映室</p>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-tighter">每日更新 · 杜比全景声</p>
                 </div>
             </div>
-            <button class="bg-amber-500 text-black text-[10px] font-black px-4 py-2 rounded-lg active:scale-90">JOIN NOW</button>
+            <button class="bg-amber-500 text-black text-[10px] font-black px-4 py-2.5 rounded-lg btn-glow">立即进群</button>
         </div>
     </div>
 
     <script>
-        const RAW_BACKEND = "https://so42088.zeabur.app/search";
-        
-        // 诊断后端是否存活
-        async function testBackend() {
-            alert("正在诊断后端： " + RAW_BACKEND);
-            try {
-                const res = await fetch(RAW_BACKEND + "?q=test").catch(e => ({ok: false}));
-                if(res.ok) alert("✅ 后端直连正常！");
-                else alert("❌ 后端直连失败，将尝试使用代理通道。");
-            } catch(e) {
-                alert("❌ 诊断出错: " + e.message);
-            }
-        }
+        // 配置地址
+        const BACKEND_URL = "https://so42088.zeabur.app/search";
 
         async function handleSearch() {
             const input = document.getElementById('searchInput');
@@ -91,61 +86,56 @@
 
             if (!query) return;
             input.blur();
-            list.innerHTML = `<div class="py-20 text-center text-amber-500"><div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest loading-dots">Connecting to Pansou Engine</p></div>`;
+            
+            list.innerHTML = `
+                <div class="py-16 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div>
+                    <p class="mt-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">穿透引擎中...</p>
+                </div>
+            `;
 
-            // 策略：尝试多个中转通道
-            const urls = [
-                `${RAW_BACKEND}?q=${encodeURIComponent(query)}`,
-                `https://api.allorigins.win/get?url=${encodeURIComponent(RAW_BACKEND + '?q=' + query)}`,
-                `https://corsproxy.io/?${encodeURIComponent(RAW_BACKEND + '?q=' + query)}`
-            ];
-
-            let success = false;
-
-            for (let url of urls) {
-                try {
-                    console.log("正在尝试通道:", url);
-                    const response = await fetch(url);
-                    if (!response.ok) continue;
-
-                    let data;
-                    if (url.includes('allorigins')) {
-                        const json = await response.json();
-                        data = JSON.parse(json.contents);
-                    } else {
-                        data = await response.json();
-                    }
-
-                    const items = data.list || data || [];
-                    if (items.length >= 0) {
-                        displayItems(items);
-                        success = true;
-                        break;
-                    }
-                } catch (e) {
-                    console.error("通道失效:", url, e);
+            // 定义尝试逻辑
+            try {
+                // 1. 尝试直接请求
+                let response = await fetch(`${BACKEND_URL}?q=${encodeURIComponent(query)}`).catch(() => null);
+                
+                let data;
+                if (!response || !response.ok) {
+                    console.log("直连失败，启动代理模式...");
+                    // 2. 尝试使用代理
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(BACKEND_URL + '?q=' + query)}`;
+                    const proxyResponse = await fetch(proxyUrl);
+                    const proxyJson = await proxyResponse.json();
+                    data = JSON.parse(proxyJson.contents);
+                } else {
+                    data = await response.json();
                 }
-            }
 
-            if (!success) {
+                renderResults(data);
+            } catch (err) {
+                console.error("Search Error:", err);
                 list.innerHTML = `
-                    <div class="py-20 text-center text-red-500/80 p-6 bg-red-500/5 rounded-3xl border border-red-500/10">
-                        <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-4"></i>
-                        <p class="font-bold text-sm uppercase">Engine Error</p>
-                        <p class="text-[10px] mt-2 opacity-60">Zeabur 响应超时或跨域限制。请确保后端 Variables 中 CORS_ALLOW_ORIGIN 为 * 并已 Redeploy。</p>
+                    <div class="py-12 text-center bg-red-500/5 rounded-3xl border border-red-500/10 px-6">
+                        <i data-lucide="alert-circle" class="w-8 h-8 mx-auto mb-3 text-red-500"></i>
+                        <p class="text-sm font-bold text-white">数据解析失败</p>
+                        <p class="text-[10px] mt-1 text-slate-500 uppercase tracking-tight">后端返回格式异常或请求被拦截</p>
+                        <button onclick="handleSearch()" class="mt-4 text-[10px] font-black text-amber-500 border border-amber-500/20 px-3 py-1 rounded">点击重试</button>
                     </div>
                 `;
             }
         }
 
-        function displayItems(items) {
+        function renderResults(data) {
             const list = document.getElementById('resultsList');
+            // 兼容多种数据结构
+            const items = data.list || data.data || (Array.isArray(data) ? data : []);
+
             if (items.length === 0) {
-                list.innerHTML = `<div class="py-20 text-center opacity-40 italic text-sm">No results found. Try another keyword.</div>`;
+                list.innerHTML = `<div class="py-16 text-center opacity-40 italic text-sm">No items found for "${document.getElementById('searchInput').value}"</div>`;
                 return;
             }
 
-            // 阿里云置顶
+            // 排序逻辑：包含“阿里”的资源强制置顶
             items.sort((a, b) => {
                 const isAAli = (a.source && a.source.includes('阿里')) || (a.link && a.link.includes('aliyundrive'));
                 const isBAli = (b.source && b.source.includes('阿里')) || (b.link && b.link.includes('aliyundrive'));
@@ -156,19 +146,23 @@
             items.forEach(item => {
                 const isAli = (item.source && item.source.includes('阿里')) || (item.link && item.link.includes('aliyundrive'));
                 html += `
-                    <div class="p-5 rounded-2xl mb-3 transition-all ${isAli ? 'aliyun-card' : 'bg-white/[0.02] border border-white/5 opacity-70'}">
-                        <div class="flex flex-col gap-3 text-left">
-                            <div class="flex items-center gap-2">
-                                <span class="px-2 py-0.5 rounded text-[9px] font-black ${isAli ? 'bg-amber-500 text-black' : 'bg-white/10 text-slate-500'} uppercase">${item.source || 'CLOUD'}</span>
-                                <span class="text-[9px] font-mono text-slate-600 font-bold">${item.size || 'HD'}</span>
+                    <div class="p-5 rounded-2xl mb-3 transition-all ${isAli ? 'aliyun-card shadow-lg' : 'bg-white/[0.02] border border-white/5 opacity-70'}">
+                        <div class="flex flex-col gap-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col gap-1 min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-[4px] text-[9px] font-black ${isAli ? 'bg-amber-500 text-black' : 'bg-white/10 text-slate-500'} uppercase">${item.source || 'CLOUD'}</span>
+                                        <span class="text-[9px] font-mono text-slate-600 font-bold tracking-tighter">${item.size || 'HD 1080P'}</span>
+                                    </div>
+                                    <h3 class="text-base font-bold leading-tight ${isAli ? 'text-white' : 'text-slate-400'}">${item.title}</h3>
+                                </div>
                             </div>
-                            <h3 class="text-sm font-bold leading-snug ${isAli ? 'text-white' : 'text-slate-400'}">${item.title}</h3>
-                            <div class="flex flex-wrap gap-2 mt-1">
-                                ${item.title.includes('4K') || item.title.includes('臻彩') ? '<span class="text-[8px] font-black text-amber-500/80 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase tracking-tighter">Premium 4K</span>' : ''}
-                                ${item.title.includes('杜比') ? '<span class="text-[8px] font-black text-sky-500/80 border border-sky-500/30 px-1.5 py-0.5 rounded uppercase tracking-tighter">Dolby Atmos</span>' : ''}
+                            <div class="flex flex-wrap gap-2">
+                                ${item.title.toLowerCase().includes('4k') || item.title.includes('臻彩') ? '<span class="text-[8px] font-black text-amber-500/80 border border-amber-500/20 px-1.5 py-0.5 rounded tracking-tighter uppercase">Zhencai 4K</span>' : ''}
+                                ${item.title.includes('杜比') || item.title.toLowerCase().includes('dolby') ? '<span class="text-[8px] font-black text-sky-400 border border-sky-400/20 px-1.5 py-0.5 rounded tracking-tighter uppercase">Dolby Atmos</span>' : ''}
                             </div>
-                            <a href="${item.link}" target="_blank" class="mt-2 w-full text-center py-3 rounded-xl text-[10px] font-black transition-all ${isAli ? 'bg-white text-black active:scale-95' : 'bg-white/5 text-slate-500'}">
-                                ${isAli ? 'SAVE TO ALIYUN DRIVE' : 'OPEN LINK'}
+                            <a href="${item.link}" target="_blank" class="mt-1 w-full text-center py-2.5 rounded-xl text-xs font-black transition-all ${isAli ? 'bg-white text-black active:scale-95' : 'bg-white/5 text-slate-500'}">
+                                ${isAli ? '存入 80T 空间' : '打开链接'}
                             </a>
                         </div>
                     </div>
