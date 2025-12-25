@@ -393,5 +393,35 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-</body>
+<script>
+window.addEventListener('load', function() {
+    // 1. 读取链接里的“信件内容” (获取 ?keyword= 后面的字)
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get('keyword');
+
+    if (key) {
+        // 2. 找到你网站的搜索框 (这里假设它是页面上第一个输入框)
+        // 如果你的搜索框有特定的 id，可以将 input 换成 document.getElementById('你的id')
+        let input = document.querySelector('input[type="text"]') || document.querySelector('input');
+        
+        if (input) {
+            // 3. 把关键词自动填进去
+            input.value = decodeURIComponent(key);
+            
+            // 模拟用户输入行为 (防止某些网站框架监测不到输入)
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // 4. 找到并点击搜索按钮 (这里假设它是页面上第一个按钮)
+            let btn = document.querySelector('button') || document.querySelector('.search-btn'); 
+            if (btn) {
+                // 稍微等一下再点，显得更像真人，也防止网页还没加载完
+                setTimeout(() => {
+                    btn.click();
+                }, 500); 
+            }
+        }
+    }
+});
+</script></body>
 </html>
